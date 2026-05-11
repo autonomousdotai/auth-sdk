@@ -1,0 +1,62 @@
+{
+  "name": "@autonomous2026/auth-sdk",
+  "version": "1.0.5",
+  "description": "Client SDK for auth-service SSO flow with OAuth2 PKCE",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./react": {
+      "import": "./dist/react/index.js",
+      "types": "./dist/react/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "react": "^19.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "auth",
+    "sso",
+    "oauth2",
+    "pkce",
+    "react",
+    "authentication"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/autonomousdotai/auth-sdk.git"
+  },
+  "homepage": "https://github.com/autonomousdotai/auth-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/autonomousdotai/auth-sdk/issues"
+  },
+  "author": "Autonomous",
+  "publishConfig": {
+    "access": "public"
+  }
+}
