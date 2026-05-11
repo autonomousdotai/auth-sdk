@@ -1,4 +1,4 @@
-# @autonomous2026/auth-sdk
+# Auth-SDK
 
 Client SDK for auth-service SSO OAuth2 flow with PKCE support.
 
@@ -179,11 +179,11 @@ client.logout();
 
 ### AuthorizeOptions
 
-| Option      | Type                                    | Description                                    |
-| ----------- | --------------------------------------- | ---------------------------------------------- |
-| `prompt`    | `'select_account' \| 'none' \| 'login'` | Force account selection or silent auth         |
-| `loginHint` | `string`                                | Pre-fill email for login                       |
-| `nextUrl`   | `string`                                | URL to redirect to after successful login      |
+| Option      | Type                                    | Description                               |
+| ----------- | --------------------------------------- | ----------------------------------------- |
+| `prompt`    | `'select_account' \| 'none' \| 'login'` | Force account selection or silent auth    |
+| `loginHint` | `string`                                | Pre-fill email for login                  |
+| `nextUrl`   | `string`                                | URL to redirect to after successful login |
 
 ### User Object
 
