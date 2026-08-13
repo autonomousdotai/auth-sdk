@@ -1,26 +1,47 @@
-# Auth-SDK
+# @autonomous-ai/auth-sdk
 
-Client SDK for auth-service SSO OAuth2 flow with PKCE support.
+Client SDK for the auth-service SSO flow — OAuth2 Authorization Code + PKCE (S256), with first-class React bindings.
+
+- **Zero runtime dependencies** — React is an optional peer dependency
+- **ESM only**, ships TypeScript types
+- Automatic token refresh before expiry
+- Post-login redirect via `nextUrl`, no server-side changes needed
 
 ## Installation
 
 ```bash
-npm install @autonomous2026/auth-sdk
+npm install @autonomous-ai/auth-sdk
 ```
 
-Or link locally:
+React is optional — only needed if you import `@autonomous-ai/auth-sdk/react`:
 
 ```bash
-cd sdk && npm install && npm run build
-cd .. && npm link ./sdk
+npm install react   # >= 18
 ```
+
+### Local development
+
+```bash
+npm install && npm run build
+npm link                       # in this repo
+npm link @autonomous-ai/auth-sdk   # in the consuming app
+```
+
+## Entry points
+
+| Import path                     | Contents                                             |
+| ------------------------------- | ---------------------------------------------------- |
+| `@autonomous-ai/auth-sdk`       | `AuthClient`, `TokenManager`, PKCE helpers, all types |
+| `@autonomous-ai/auth-sdk/react` | `AuthProvider`, `useAuth`, `useUser`, `useAuthCallback` |
 
 ## Quick Start (React)
 
 ### 1. Wrap your app with AuthProvider
 
+Define `authConfig` outside the component (or memoize it) — a new object identity on every render re-triggers the provider's effects.
+
 ```tsx
-import { AuthProvider } from "@autonomous2026/auth-sdk/react";
+import { AuthProvider } from "@autonomous-ai/auth-sdk/react";
 
 const authConfig = {
   ssoUrl: "https://sso.example.com",
@@ -41,7 +62,7 @@ function App() {
 ### 2. Use the hooks
 
 ```tsx
-import { useAuth, useUser } from "@autonomous2026/auth-sdk/react";
+import { useAuth, useUser } from "@autonomous-ai/auth-sdk/react";
 
 function LoginButton() {
   const { isAuthenticated, login, logout, isLoading } = useAuth();
@@ -60,30 +81,30 @@ function UserProfile() {
 
   if (!user) return null;
 
-  return (
-    <div>
-      <p>Welcome, {user.fullName || user.email}!</p>
-    </div>
-  );
+  return <p>Welcome, {user.fullName || user.email}!</p>;
 }
 ```
 
-### 3. Handle OAuth2 callback
+### 3. Handle the OAuth2 callback
+
+Mount this on the route you registered as `redirectUri`. The hook reads `code` / `state` from the URL, exchanges them for tokens, and is guarded against React StrictMode double-invocation.
 
 ```tsx
-import { useAuthCallback } from "@autonomous2026/auth-sdk/react";
+import { useEffect } from "react";
+import { useAuthCallback, useAuth } from "@autonomous-ai/auth-sdk/react";
 import { useNavigate } from "react-router-dom";
 
 function CallbackPage() {
   const navigate = useNavigate();
+  const { refreshAuthState } = useAuth();
   const { isLoading, error, success, nextUrl } = useAuthCallback(authConfig);
 
   useEffect(() => {
     if (success) {
-      // Redirect to nextUrl if provided, otherwise go to home
+      refreshAuthState(); // re-read tokens written by the callback
       navigate(nextUrl || "/");
     }
-  }, [success, navigate, nextUrl]);
+  }, [success, nextUrl, navigate, refreshAuthState]);
 
   if (isLoading) return <div>Processing login...</div>;
   if (error) return <div>Login failed: {error}</div>;
@@ -92,12 +113,13 @@ function CallbackPage() {
 }
 ```
 
-### 4. Post-login redirect (nextUrl)
+### 4. Post-login redirect (`nextUrl`)
 
-Use `nextUrl` to redirect users back to the page they were on before login. This is useful for protected pages that require authentication.
+Pass `nextUrl` to `login()` to send the user back to the page they started from. It is stored in `sessionStorage` before the SSO redirect and returned by `useAuthCallback` after a successful exchange.
 
 ```tsx
-import { useAuth } from "@autonomous2026/auth-sdk/react";
+import { useEffect } from "react";
+import { useAuth } from "@autonomous-ai/auth-sdk/react";
 import { useLocation } from "react-router-dom";
 
 function ProtectedPage() {
@@ -106,7 +128,6 @@ function ProtectedPage() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      // Save current URL and redirect to SSO
       login({
         nextUrl: `${location.pathname}${location.search}${location.hash}`,
       });
@@ -121,12 +142,10 @@ function ProtectedPage() {
 }
 ```
 
-The `nextUrl` is stored in `sessionStorage` before redirecting to SSO, and is returned via `useAuthCallback` after successful authentication. No server-side changes are needed.
-
-## Vanilla JavaScript Usage
+## Vanilla JavaScript / TypeScript
 
 ```typescript
-import { AuthClient } from "@autonomous2026/auth-sdk";
+import { AuthClient } from "@autonomous-ai/auth-sdk";
 
 const client = new AuthClient({
   ssoUrl: "https://sso.example.com",
@@ -135,29 +154,32 @@ const client = new AuthClient({
   scope: "openid profile email",
 });
 
-// Start login (with optional nextUrl for post-login redirect)
+// Start login (redirects the browser to SSO)
 await client.authorize({ nextUrl: "/dashboard" });
 
-// Handle callback (on callback page)
-const result = await client.handleCallback(code, state);
+// On the callback page
+const params = new URLSearchParams(window.location.search);
+const result = await client.handleCallback(
+  params.get("code")!,
+  params.get("state")!
+);
+
 if (result.success) {
-  console.log("Logged in!", result.tokens);
-  // Redirect to nextUrl if provided
-  if (result.nextUrl) {
-    window.location.href = result.nextUrl;
-  }
+  if (result.nextUrl) window.location.href = result.nextUrl;
+} else {
+  console.error(result.error);
 }
 
-// Check auth status
+// Auth status
 if (client.isAuthenticated()) {
-  const user = client.getUser();
-  console.log("User:", user);
+  console.log("User:", client.getUser());
 }
 
-// Get access token (auto-refreshes if expired)
+// Access token for API calls — refreshes automatically if expired
 const token = await client.getValidAccessToken();
+await fetch("/api/me", { headers: { Authorization: `Bearer ${token}` } });
 
-// Logout
+// Logout (clears tokens and redirects to SSO logout)
 client.logout();
 ```
 
@@ -165,17 +187,31 @@ client.logout();
 
 ### AuthClient
 
-| Method                        | Description                     |
-| ----------------------------- | ------------------------------- |
-| `authorize(options?)`         | Start OAuth2 login flow         |
-| `handleCallback(code, state)` | Exchange code for tokens        |
-| `refreshToken()`              | Refresh access token            |
-| `logout(redirectUri?)`        | Logout and redirect to SSO      |
-| `isAuthenticated()`           | Check if user is logged in      |
-| `getAccessToken()`            | Get current access token        |
-| `getUser()`                   | Get decoded user from JWT       |
-| `getValidAccessToken()`       | Get token, refresh if expired   |
-| `clearTokens()`               | Clear tokens without SSO logout |
+| Method                          | Returns                    | Description                              |
+| ------------------------------- | -------------------------- | ---------------------------------------- |
+| `authorize(options?)`           | `Promise<void>`            | Start OAuth2 login flow (redirects away)  |
+| `handleCallback(code, state)`   | `Promise<CallbackResult>`  | Exchange authorization code for tokens    |
+| `refreshToken()`                | `Promise<TokenResponse>`   | Refresh the access token                  |
+| `logout(redirectUri?)`          | `void`                     | Clear tokens and redirect to SSO logout   |
+| `isAuthenticated()`             | `boolean`                  | Whether a valid session exists            |
+| `getAccessToken()`              | `string \| null`           | Current access token                      |
+| `getRefreshToken()`             | `string \| null`           | Current refresh token                     |
+| `getUser()`                     | `User \| null`             | User decoded from the JWT                 |
+| `isTokenExpired(buffer = 60)`   | `boolean`                  | Expiry check with a seconds buffer        |
+| `getValidAccessToken()`         | `Promise<string>`          | Token, refreshed if expired               |
+| `clearTokens()`                 | `void`                     | Clear tokens without an SSO logout        |
+
+`createAuthClient(config)` is a factory shorthand for `new AuthClient(config)`.
+
+### AuthConfig
+
+| Option        | Type           | Default          | Description                          |
+| ------------- | -------------- | ---------------- | ------------------------------------ |
+| `ssoUrl`      | `string`       | required         | SSO server base URL                  |
+| `clientId`    | `string`       | required         | OAuth2 client ID                     |
+| `redirectUri` | `string`       | required         | Callback URL registered with the SSO |
+| `scope`       | `string?`      | -                | Space-separated scopes               |
+| `storage`     | `TokenStorage?` | `localStorage`  | Custom token storage                 |
 
 ### AuthorizeOptions
 
@@ -185,37 +221,59 @@ client.logout();
 | `loginHint` | `string`                                | Pre-fill email for login                  |
 | `nextUrl`   | `string`                                | URL to redirect to after successful login |
 
-### User Object
+### User
 
-| Field           | Type        | Description     |
-| --------------- | ----------- | --------------- |
-| `id`            | `string`    | User ID         |
-| `email`         | `string`    | User email      |
-| `fullName`      | `string?`   | Full name       |
-| `roles`         | `string[]?` | User roles      |
-| `companyDomain` | `string?`   | Company domain  |
-| `isEppUser`     | `boolean?`  | EPP user status |
+Parsed from the JWT's `ext_info` claim.
 
-### React Hooks
+| Field                | Type        | Description               |
+| -------------------- | ----------- | ------------------------- |
+| `id`                 | `string`    | User ID                   |
+| `email`              | `string`    | User email                |
+| `fullName`           | `string?`   | Full name                 |
+| `code`               | `string?`   | User code                 |
+| `roles`              | `string[]?` | User roles                |
+| `scope`              | `string?`   | Granted scope             |
+| `companyDomain`      | `string?`   | Company domain            |
+| `companyDomainType`  | `string?`   | Company domain type       |
+| `isEppUser`          | `boolean?`  | Employee Purchase Program |
+| `vendorId`           | `string?`   | Vendor ID                 |
+| `vendorCode`         | `string?`   | Vendor code               |
+| `vendorName`         | `string?`   | Vendor name               |
+| `referralCode`       | `string?`   | Referral code             |
 
-| Hook                      | Returns            | Description            |
-| ------------------------- | ------------------ | ---------------------- |
-| `useAuth()`               | `AuthContextValue` | Auth state and actions |
-| `useUser()`               | `User \| null`     | Current user info      |
-| `useAuthCallback(config)` | Callback state     | Handle OAuth2 callback |
+### CallbackResult
 
-### AuthProvider Props
+| Field     | Type              | Description                            |
+| --------- | ----------------- | -------------------------------------- |
+| `success` | `boolean`         | Whether the code exchange succeeded    |
+| `tokens`  | `TokenResponse?`  | Tokens returned by auth-service        |
+| `error`   | `string?`         | Error message when `success` is false  |
+| `nextUrl` | `string?`         | Post-login redirect target             |
+
+### React hooks
+
+| Hook                      | Returns                                                     | Description            |
+| ------------------------- | ----------------------------------------------------------- | ---------------------- |
+| `useAuth()`               | `AuthContextValue`                                           | Auth state and actions |
+| `useUser()`               | `User \| null`                                               | Current user           |
+| `useAuthCallback(config)` | `{ isLoading, error, success, result, nextUrl }`             | Handle OAuth2 callback |
+
+`useAuth()` returns `isAuthenticated`, `isLoading`, `user`, `error`, plus `login()`, `logout()`, `getAccessToken()`, `refreshToken()` and `refreshAuthState()`.
+
+`useAuthCallback` creates its own `AuthClient` and works outside `AuthProvider` — but call `refreshAuthState()` afterwards so the provider picks up the new tokens.
+
+### AuthProvider props
 
 | Prop            | Type         | Default  | Description                      |
 | --------------- | ------------ | -------- | -------------------------------- |
 | `config`        | `AuthConfig` | required | Auth configuration               |
 | `autoRefresh`   | `boolean`    | `true`   | Auto-refresh tokens              |
 | `refreshBuffer` | `number`     | `60`     | Seconds before expiry to refresh |
-| `onAuthChange`  | `function`   | -        | Callback on auth state change    |
+| `onAuthChange`  | `function`   | -        | Called on auth state change      |
 
-## Custom Storage
+## Custom storage
 
-By default, tokens are stored in `localStorage`. You can provide a custom storage:
+Tokens go to `localStorage` by default. Supply any object implementing `TokenStorage` to change that — e.g. `sessionStorage` so the session dies with the tab:
 
 ```typescript
 const client = new AuthClient({
@@ -228,9 +286,15 @@ const client = new AuthClient({
 });
 ```
 
+The PKCE verifier and `state` always use `sessionStorage`, regardless of this setting.
+
 ## Security
 
-- Uses PKCE (S256) to prevent authorization code interception
-- State parameter for CSRF protection
-- PKCE verifier stored in sessionStorage (not localStorage)
-- Automatic token refresh before expiry
+- PKCE (S256) prevents authorization code interception
+- `state` parameter for CSRF protection, validated on callback
+- PKCE verifier kept in `sessionStorage`, never in `localStorage`
+- Tokens refreshed automatically before expiry (`refreshBuffer`)
+
+## License
+
+MIT

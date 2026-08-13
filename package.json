@@ -1,6 +1,6 @@
 {
-  "name": "@autonomous2026/auth-sdk",
-  "version": "1.0.6",
+  "name": "@autonomous-ai/auth-sdk",
+  "version": "1.0.7",
   "description": "Client SDK for auth-service SSO flow with OAuth2 PKCE",
   "type": "module",
   "main": "dist/index.js",
