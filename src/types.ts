@@ -33,6 +33,8 @@ export interface AuthorizeOptions {
   loginHint?: string;
   /** URL to redirect to after successful login callback */
   nextUrl?: string;
+  /** UI placement that started the sign-in (e.g. "header", "checkout"), for login source tracking */
+  entryPoint?: string;
 }
 
 /**
@@ -47,6 +49,8 @@ export interface TokenResponse {
   id_token?: string;
   /** Extra fields from auth-service */
   first_time?: boolean;
+  /** True the first time this user gets a session in this app */
+  first_time_in_app?: boolean;
   cart_id?: string;
   epp_user?: boolean;
   company_domain?: string;

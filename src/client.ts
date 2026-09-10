@@ -63,6 +63,9 @@ export class AuthClient {
     if (options?.loginHint) {
       params.set('login_hint', options.loginHint);
     }
+    if (options?.entryPoint) {
+      params.set('entry_point', options.entryPoint);
+    }
 
     // Redirect to SSO authorization endpoint
     window.location.href = `${this.config.ssoUrl}/oauth2/authorize?${params.toString()}`;
