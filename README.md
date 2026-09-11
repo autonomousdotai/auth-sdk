@@ -203,6 +203,11 @@ client.logout();
 
 `createAuthClient(config)` is a factory shorthand for `new AuthClient(config)`.
 
+### Login source tracking
+
+- `login({ entryPoint: 'header' })` / `authorize({ entryPoint })` tells auth-service which UI placement started the sign-in.
+- After the callback, `result.tokens.first_time_in_app` is `true` the first time this user gets a session in your app (use it for onboarding). `result.tokens.first_time` is `true` for their first sign-in anywhere in the Autonomous ecosystem.
+
 ### AuthConfig
 
 | Option        | Type           | Default          | Description                          |
