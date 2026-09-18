@@ -192,7 +192,7 @@ client.logout();
 | `authorize(options?)`           | `Promise<void>`            | Start OAuth2 login flow (redirects away)  |
 | `handleCallback(code, state)`   | `Promise<CallbackResult>`  | Exchange authorization code for tokens    |
 | `refreshToken()`                | `Promise<TokenResponse>`   | Refresh the access token                  |
-| `logout(redirectUri?)`          | `void`                     | Clear tokens and redirect to SSO logout   |
+| `logout(redirectUri?)`          | `Promise<void>`            | Revoke this sign-in, clear tokens and redirect to SSO logout |
 | `isAuthenticated()`             | `boolean`                  | Whether a valid session exists            |
 | `getAccessToken()`              | `string \| null`           | Current access token                      |
 | `getRefreshToken()`             | `string \| null`           | Current refresh token                     |

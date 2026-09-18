@@ -97,7 +97,7 @@ export function AuthProvider({
 
   const logout = useCallback(
     (redirectUri?: string) => {
-      client.logout(redirectUri);
+      void client.logout(redirectUri);
     },
     [client]
   );

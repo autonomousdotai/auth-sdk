@@ -9,6 +9,9 @@ import type {
 } from './types';
 import { SDK_VERSION } from './version';
 
+/** A slow or failing revoke never holds up logout for longer than this. */
+const REVOKE_TIMEOUT_MS = 2000;
+
 /**
  * Auth Client for OAuth2 SSO flow with PKCE
  */
@@ -181,15 +184,21 @@ export class AuthClient {
   }
 
   /**
-   * Logout - clears tokens and redirects to SSO logout
+   * Logout - revokes this app's sign-in, clears tokens and redirects to SSO logout
    */
-  logout(redirectUri?: string): void {
+  async logout(redirectUri?: string): Promise<void> {
     const postLogoutRedirectUri = redirectUri || window.location.origin;
     const idToken = this.tokenManager.getAccessToken();
+    const refreshToken = this.tokenManager.getRefreshToken();
 
     // Clear local tokens
     this.tokenManager.clearTokens();
     pkceStorage.clear();
+
+    // Remove this sign-in from the user's "Devices & apps" list (best effort).
+    if (refreshToken) {
+      await this.revokeToken(refreshToken);
+    }
 
     // Build logout URL
     const params = new URLSearchParams({
@@ -202,6 +211,33 @@ export class AuthClient {
 
     // Redirect to SSO logout endpoint
     window.location.href = `${this.config.ssoUrl}/oauth2/logout?${params.toString()}`;
+  }
+
+  /**
+   * Revoke a token at the SSO server (RFC 7009). Errors and timeouts are ignored.
+   */
+  private async revokeToken(token: string): Promise<void> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REVOKE_TIMEOUT_MS);
+    try {
+      await fetch(`${this.config.ssoUrl}/oauth2/revoke`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          token,
+          token_type_hint: 'refresh_token',
+          client_id: this.config.clientId,
+        }),
+        signal: controller.signal,
+        keepalive: true,
+      });
+    } catch {
+      // Best effort: the user is logged out locally either way.
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   /**
