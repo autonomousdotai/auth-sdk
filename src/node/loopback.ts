@@ -29,6 +29,10 @@ export function awaitLoopbackCallback(args: {
       clearTimeout(timer)
       args.signal?.removeEventListener('abort', onAbort)
       server.close(() => (err ? reject(err) : resolve(code as string)))
+      // Belt-and-suspenders for any socket that didn't pick up Connection: close
+      // in time (or never sent a request at all, e.g. timeout/abort) — force it
+      // shut now rather than let server.close()'s callback wait on it.
+      server.closeAllConnections()
     }
     const timer = setTimeout(() => finish(new AuthSignInError('TIMEOUT', 'Timed out waiting for the browser sign-in.')), args.timeoutMs)
     const onAbort = () => finish(new AuthSignInError('CANCELLED', 'The sign-in was cancelled.'))
@@ -40,7 +44,10 @@ export function awaitLoopbackCallback(args: {
       const state = url.searchParams.get('state')
       const error = url.searchParams.get('error')
       const ok = !error && code && state === args.state
-      res.writeHead(ok ? 200 : 400, { 'content-type': 'text/html; charset=utf-8' })
+      // Tell Node (and the browser) to close this socket once the response is
+      // sent, instead of leaving it idle on keep-alive — otherwise server.close()
+      // below waits out the client's keep-alive timeout before its callback fires.
+      res.writeHead(ok ? 200 : 400, { 'content-type': 'text/html; charset=utf-8', connection: 'close' })
       res.end(ok ? DONE_PAGE : FAILED_PAGE)
       if (error) return finish(new AuthSignInError('SERVER', `The sign-in was refused: ${error}`))
       if (!code) return finish(new AuthSignInError('SERVER', 'The browser came back without an authorization code.'))

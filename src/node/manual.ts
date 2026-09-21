@@ -31,7 +31,12 @@ export async function readPastedCode(io: NodeSignInIO, state: string): Promise<s
   let code: string | null = null
   let pastedState: string | null = null
   if (answer.includes('://')) {
-    const url = new URL(answer)
+    let url: URL
+    try {
+      url = new URL(answer)
+    } catch {
+      throw new AuthSignInError('CANCELLED', "That does not look like a valid URL. Paste the whole callback link, or just 'code#state'.")
+    }
     code = url.searchParams.get('code')
     pastedState = url.searchParams.get('state')
   } else {

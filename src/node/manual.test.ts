@@ -27,4 +27,8 @@ describe('readPastedCode', () => {
   it('refuses an empty paste', async () => {
     await expect(readPastedCode(io(['   ']), 'st')).rejects.toMatchObject({ code: 'CANCELLED' })
   })
+
+  it('refuses a malformed pasted URL instead of throwing a raw TypeError', async () => {
+    await expect(readPastedCode(io(['https:// broken url']), 'st')).rejects.toMatchObject({ code: 'CANCELLED' })
+  })
 })
