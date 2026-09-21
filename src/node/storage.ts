@@ -4,8 +4,13 @@ import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import type { NodeSession, NodeTokenStorage } from './types.js'
 
+// Invariant: LOCK_STALE_MS > oauth's TOKEN_TIMEOUT_MS > LOCK_TIMEOUT_MS. The
+// longest thing that legitimately runs inside the lock is the refresh POST,
+// bounded by oauth.ts's token timeout; a lock is only ever taken over once
+// its holder could not possibly still be doing that work, and a waiter gives
+// up well before it would consider the lock stale itself.
 const LOCK_TIMEOUT_MS = 10_000
-const LOCK_STALE_MS = 30_000
+const LOCK_STALE_MS = 120_000
 const LOCK_RETRY_MS = 50
 
 /** The directory a CLI's session file lives in. */

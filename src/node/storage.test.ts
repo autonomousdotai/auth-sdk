@@ -1,5 +1,5 @@
 import { mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs'
-import { chmod } from 'node:fs/promises'
+import { chmod, utimes } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -83,6 +83,22 @@ describe('fileTokenStorage', () => {
     const storage = fileTokenStorage('my-cli')
     await expect(storage.withLock(async () => { throw new Error('boom') })).rejects.toThrow('boom')
     await expect(storage.withLock(async () => 'free')).resolves.toBe('free')
+  })
+
+  it('takes over a lock left behind by a process that died, once it is stale', async () => {
+    const storage = fileTokenStorage('my-cli')
+    await storage.write(session) // ensures the config dir exists
+    const lockPath = `${configFilePath('my-cli')}.lock`
+    writeFileSync(lockPath, '')
+    // Older than LOCK_STALE_MS (120s) but comfortably within LOCK_TIMEOUT_MS
+    // (10s) of "now" being irrelevant here — the point is the takeover must
+    // not wait out the full retry loop.
+    const staleTime = new Date(Date.now() - 130_000)
+    await utimes(lockPath, staleTime, staleTime)
+
+    const start = Date.now()
+    await expect(storage.withLock(async () => 'took it over')).resolves.toBe('took it over')
+    expect(Date.now() - start).toBeLessThan(5_000)
   })
 
   it.skipIf(!canEnforcePermissions)('throws when the session file exists but cannot be read', async () => {

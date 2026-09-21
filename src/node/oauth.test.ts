@@ -1,6 +1,6 @@
 import { createServer, type Server } from 'node:http'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { AuthSessionError, AuthSignInError } from './errors'
+import { AuthSessionError } from './errors'
 import { buildAuthorizeUrl, exchangeCode, oauthTimeouts, refreshSession, revokeRefreshToken, sessionFromTokenResponse } from './oauth'
 import type { NodeAuthConfig } from './types'
 
@@ -103,7 +103,7 @@ describe('exchangeCode', () => {
     hang = true
     oauthTimeouts.tokenMs = 50
     await expect(exchangeCode(config(), { code: 'c', codeVerifier: 'v', redirectUri: 'r', deviceName: 'd' }))
-      .rejects.toBeInstanceOf(AuthSignInError)
+      .rejects.toMatchObject({ code: 'TIMEOUT' })
   })
 })
 

@@ -77,7 +77,7 @@ export async function exchangeCode(
     }, controller.signal)
   } catch (err) {
     if (isAbortError(err)) {
-      throw new AuthSignInError('SERVER', `The sign-in request to ${config.ssoUrl} timed out. Please try again.`)
+      throw new AuthSignInError('TIMEOUT', `The sign-in request to ${config.ssoUrl} timed out. Please try again.`)
     }
     throw new AuthSignInError('SERVER', `Could not reach ${config.ssoUrl}: ${(err as Error).message}`)
   } finally {
