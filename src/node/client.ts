@@ -66,6 +66,11 @@ export class NodeAuthClient {
       code = await readPastedCode(io, state)
     } else {
       redirectUri = this.config.redirectUri ?? ''
+      // awaitLoopbackCallback wraps whatever onReady throws into its own
+      // AuthSignInError('SERVER', ...) before rejecting, so the NO_BROWSER
+      // code thrown below would otherwise never reach the caller. Keep our
+      // own reference to it and prefer it over the wrapped rejection.
+      let noBrowserError: AuthSignInError | null = null
       code = await awaitLoopbackCallback({
         port: this.config.loopbackPort ?? 0,
         state,
@@ -77,9 +82,12 @@ export class NodeAuthClient {
           options.onAuthorizeUrl?.(url, 'loopback')
           io.write(`\nSign in to continue:\n\n  ${url}\n\n`)
           if (!(await openBrowser(url)) && wanted === 'loopback') {
-            throw new AuthSignInError('NO_BROWSER', 'No browser could be opened. Open the URL above, or sign in with the pasted-code flow.')
+            noBrowserError = new AuthSignInError('NO_BROWSER', 'No browser could be opened. Open the URL above, or sign in with the pasted-code flow.')
+            throw noBrowserError
           }
         },
+      }).catch((err) => {
+        throw noBrowserError ?? err
       })
     }
 
@@ -104,9 +112,26 @@ export class NodeAuthClient {
       .withLock(async () => {
         const current = (await this.storage.read()) ?? session
         if (current.expiresAt - REFRESH_SKEW_MS > Date.now()) return current
-        const refreshed = await refreshSession(this.config, current)
-        await this.storage.write(refreshed)
-        return refreshed
+        try {
+          const refreshed = await refreshSession(this.config, current)
+          await this.storage.write(refreshed)
+          return refreshed
+        } catch (err) {
+          if (err instanceof AuthSessionError && err.code === 'SIGNED_OUT') {
+            // Clear while still holding the lock, so there is no window
+            // between releasing it and clearing in which a concurrent write
+            // (another sign-in, or another process's successful refresh)
+            // could land and then be clobbered by this cleanup. If the file
+            // no longer holds the exact session we just tried to refresh,
+            // someone else already replaced it with something valid — leave
+            // it alone.
+            const onDisk = await this.storage.read()
+            if (onDisk && JSON.stringify(onDisk) === JSON.stringify(current)) {
+              await this.storage.clear()
+            }
+          }
+          throw err
+        }
       })
       .then(
         (refreshed) => {
@@ -114,10 +139,9 @@ export class NodeAuthClient {
           this.refreshing = null
           return refreshed
         },
-        async (err) => {
+        (err) => {
           this.refreshing = null
           if (err instanceof AuthSessionError && err.code === 'SIGNED_OUT') {
-            await this.storage.clear()
             this.session = null
           }
           throw err

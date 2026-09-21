@@ -7,20 +7,34 @@ import { createNodeAuthClient } from './client'
 import { fileTokenStorage } from './storage'
 import type { NodeSession, NodeSignInIO } from './types'
 
+// signIn's loopback path calls environment's openBrowser; mocking only that
+// export (and keeping everything else real, notably prefersManualMode) lets
+// the NO_BROWSER test force "no browser could be opened" deterministically.
+vi.mock('./environment', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./environment')>()
+  return { ...actual, openBrowser: vi.fn().mockResolvedValue(false) }
+})
+
 let server: Server
 let baseUrl: string
 let requests: { url: string; body: URLSearchParams }[]
 let tokenReply: { status: number; body: unknown }
+// When set, the server waits on this promise after receiving a token request
+// and before answering it — lets a test land a concurrent write while a
+// request is provably still in flight.
+let respondAfter: Promise<void> | null
 
 beforeEach(async () => {
   process.env.XDG_CONFIG_HOME = mkdtempSync(join(tmpdir(), 'auth-sdk-'))
   requests = []
   tokenReply = { status: 200, body: { access_token: 'at', refresh_token: 'rt', expires_in: 3600 } }
+  respondAfter = null
   server = createServer((req, res) => {
     let raw = ''
     req.on('data', (chunk) => { raw += chunk })
-    req.on('end', () => {
+    req.on('end', async () => {
       requests.push({ url: req.url ?? '', body: new URLSearchParams(raw) })
+      if (respondAfter) await respondAfter
       res.writeHead(tokenReply.status, { 'content-type': 'application/json' })
       res.end(JSON.stringify(tokenReply.body))
     })
@@ -105,6 +119,31 @@ describe('getAccessToken', () => {
     await expect(fileTokenStorage('my-cli').read()).resolves.not.toBeNull()
   })
 
+  it('does not delete a session written by another process while a refused refresh is in flight', async () => {
+    await fileTokenStorage('my-cli').write(stored(0))
+    let releaseResponse: () => void
+    respondAfter = new Promise<void>((resolve) => { releaseResponse = resolve })
+    tokenReply = { status: 401, body: { error: { message: 'invalid_grant' } } }
+
+    const auth = client()
+    const pending = auth.getAccessToken()
+
+    // Wait until the refresh request has actually reached the server — this
+    // proves the in-flight refresh already read the stale session from disk
+    // — before writing a fresh session behind its back through a second
+    // storage instance (standing in for another process). Only then let the
+    // gated 401 response through.
+    await vi.waitFor(() => {
+      expect(requests.filter((r) => r.body.get('grant_type') === 'refresh_token')).toHaveLength(1)
+    })
+    const fresh = stored(Date.now() + 600_000)
+    await fileTokenStorage('my-cli').write(fresh)
+    releaseResponse!()
+
+    await expect(pending).rejects.toMatchObject({ code: 'SIGNED_OUT' })
+    await expect(fileTokenStorage('my-cli').read()).resolves.toMatchObject(fresh)
+  })
+
   it('says there is no session at all', async () => {
     await expect(client().getAccessToken()).rejects.toMatchObject({ code: 'NO_SESSION' })
   })
@@ -140,5 +179,12 @@ describe('mode selection', () => {
 
     expect(new URL(printed).searchParams.get('redirect_uri')).toBe(`${baseUrl}/oauth2/code`)
     vi.unstubAllEnvs()
+  })
+
+  it('fails with NO_BROWSER when the loopback flow cannot open a browser and exchanges nothing', async () => {
+    const auth = client()
+
+    await expect(auth.signIn({ mode: 'loopback', io: io([]) })).rejects.toMatchObject({ code: 'NO_BROWSER' })
+    expect(requests).toHaveLength(0)
   })
 })
