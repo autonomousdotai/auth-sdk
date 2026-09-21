@@ -7,8 +7,8 @@ import React, {
   useMemo,
   type ReactNode,
 } from 'react';
-import { AuthClient } from '../client';
-import type { AuthConfig, AuthContextValue, AuthorizeOptions, User, TokenResponse } from '../types';
+import { AuthClient } from '../client.js';
+import type { AuthConfig, AuthContextValue, AuthorizeOptions, User, TokenResponse } from '../types.js';
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 

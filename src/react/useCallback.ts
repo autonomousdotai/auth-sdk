@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { AuthClient } from '../client';
-import type { AuthConfig, CallbackResult } from '../types';
+import { AuthClient } from '../client.js';
+import type { AuthConfig, CallbackResult } from '../types.js';
 
 /**
  * Hook to handle OAuth2 callback

@@ -1,5 +1,5 @@
-export { AuthProvider, useAuthContext, AuthContext } from './AuthProvider';
-export type { AuthProviderProps } from './AuthProvider';
-export { useAuth } from './useAuth';
-export { useUser } from './useUser';
-export { useAuthCallback } from './useCallback';
+export { AuthProvider, useAuthContext, AuthContext } from './AuthProvider.js';
+export type { AuthProviderProps } from './AuthProvider.js';
+export { useAuth } from './useAuth.js';
+export { useUser } from './useUser.js';
+export { useAuthCallback } from './useCallback.js';
