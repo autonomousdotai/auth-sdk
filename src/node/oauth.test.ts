@@ -1,21 +1,27 @@
 import { createServer, type Server } from 'node:http'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { AuthSessionError } from './errors'
-import { buildAuthorizeUrl, exchangeCode, refreshSession, revokeRefreshToken, sessionFromTokenResponse } from './oauth'
+import { AuthSessionError, AuthSignInError } from './errors'
+import { buildAuthorizeUrl, exchangeCode, oauthTimeouts, refreshSession, revokeRefreshToken, sessionFromTokenResponse } from './oauth'
 import type { NodeAuthConfig } from './types'
 
 let server: Server
 let baseUrl: string
 let requests: { url: string; body: URLSearchParams }[] = []
 let reply: { status: number; body: unknown } = { status: 200, body: {} }
+// When true, the handler records the request but never responds, so the
+// client has to fall back to its own timeout — exercising that path without
+// waiting out the real (30s) production default.
+let hang = false
 
 beforeEach(async () => {
   requests = []
+  hang = false
   server = createServer((req, res) => {
     let raw = ''
     req.on('data', (chunk) => { raw += chunk })
     req.on('end', () => {
       requests.push({ url: req.url ?? '', body: new URLSearchParams(raw) })
+      if (hang) return
       res.writeHead(reply.status, { 'content-type': 'application/json' })
       res.end(JSON.stringify(reply.body))
     })
@@ -27,6 +33,7 @@ beforeEach(async () => {
 })
 
 afterEach(async () => {
+  oauthTimeouts.tokenMs = 30_000
   await new Promise<void>((resolve) => server.close(() => resolve()))
 })
 
@@ -91,6 +98,13 @@ describe('exchangeCode', () => {
     await expect(exchangeCode(config(), { code: 'c', codeVerifier: 'v', redirectUri: 'r', deviceName: 'd' }))
       .rejects.toThrow(/sign in/i)
   })
+
+  it('times out instead of hanging on an unresponsive server', async () => {
+    hang = true
+    oauthTimeouts.tokenMs = 50
+    await expect(exchangeCode(config(), { code: 'c', codeVerifier: 'v', redirectUri: 'r', deviceName: 'd' }))
+      .rejects.toBeInstanceOf(AuthSignInError)
+  })
 })
 
 describe('refreshSession', () => {
@@ -123,6 +137,12 @@ describe('refreshSession', () => {
   it('refuses a session with no refresh token', async () => {
     await expect(refreshSession(config(), { ...stored, refreshToken: undefined }))
       .rejects.toBeInstanceOf(AuthSessionError)
+  })
+
+  it('times out instead of hanging on an unresponsive server', async () => {
+    hang = true
+    oauthTimeouts.tokenMs = 50
+    await expect(refreshSession(config(), stored)).rejects.toMatchObject({ code: 'UNAVAILABLE' })
   })
 })
 

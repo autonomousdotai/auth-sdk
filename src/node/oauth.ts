@@ -3,7 +3,17 @@ import { AuthSessionError, AuthSignInError } from './errors'
 import type { NodeAuthConfig, NodeSession } from './types'
 
 const DEFAULT_SCOPE = 'openid profile email'
+const TOKEN_TIMEOUT_MS = 30_000
 const REVOKE_TIMEOUT_MS = 2_000
+
+/**
+ * Timeouts for outgoing requests. A plain module constant can't be shortened
+ * from a test file (imported bindings are read-only), so this is exposed as a
+ * mutable object instead — production code should never need to touch it.
+ */
+export const oauthTimeouts = { tokenMs: TOKEN_TIMEOUT_MS }
+
+const isAbortError = (err: unknown): boolean => err instanceof Error && err.name === 'AbortError'
 
 const trimUrl = (url: string) => url.replace(/\/$/, '')
 
@@ -54,6 +64,8 @@ export async function exchangeCode(
   config: NodeAuthConfig,
   args: { code: string; codeVerifier: string; redirectUri: string; deviceName: string },
 ): Promise<NodeSession> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), oauthTimeouts.tokenMs)
   let result: Awaited<ReturnType<typeof postForm>>
   try {
     result = await postForm(config, '/oauth2/token', {
@@ -62,9 +74,14 @@ export async function exchangeCode(
       redirect_uri: args.redirectUri,
       code_verifier: args.codeVerifier,
       device_name: args.deviceName,
-    })
+    }, controller.signal)
   } catch (err) {
+    if (isAbortError(err)) {
+      throw new AuthSignInError('SERVER', `The sign-in request to ${config.ssoUrl} timed out. Please try again.`)
+    }
     throw new AuthSignInError('SERVER', `Could not reach ${config.ssoUrl}: ${(err as Error).message}`)
+  } finally {
+    clearTimeout(timer)
   }
   const data = (result.body.data as Record<string, unknown>) ?? result.body
   if (!result.response.ok || typeof data.access_token !== 'string') {
@@ -77,11 +94,18 @@ export async function refreshSession(config: NodeAuthConfig, session: NodeSessio
   if (!session.refreshToken) {
     throw new AuthSessionError('SIGNED_OUT', 'This session has no refresh token. Please sign in again.')
   }
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), oauthTimeouts.tokenMs)
   let result: Awaited<ReturnType<typeof postForm>>
   try {
-    result = await postForm(config, '/oauth2/token', { grant_type: 'refresh_token', refresh_token: session.refreshToken })
+    result = await postForm(config, '/oauth2/token', { grant_type: 'refresh_token', refresh_token: session.refreshToken }, controller.signal)
   } catch (err) {
+    if (isAbortError(err)) {
+      throw new AuthSessionError('UNAVAILABLE', `The sign-in service at ${config.ssoUrl} timed out. Please try again.`)
+    }
     throw new AuthSessionError('UNAVAILABLE', `Could not reach ${config.ssoUrl}: ${(err as Error).message}`)
+  } finally {
+    clearTimeout(timer)
   }
   // 401 is what auth-service answers for a revoked grant, 400 for a refused one.
   if (result.response.status === 400 || result.response.status === 401) {
