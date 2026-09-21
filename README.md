@@ -303,3 +303,36 @@ The PKCE verifier and `state` always use `sessionStorage`, regardless of this se
 ## License
 
 MIT
+
+## Node (CLIs)
+
+```bash
+npm install @autonomous-ai/auth-sdk
+```
+
+```ts
+import { createNodeAuthClient } from '@autonomous-ai/auth-sdk/node'
+
+const auth = createNodeAuthClient({
+  ssoUrl: 'https://auth.autonomous.ai',
+  clientId: 'my-cli',
+  appName: 'my-cli', // ~/.config/my-cli/auth.json
+})
+
+await auth.signIn()                 // browser + 127.0.0.1, or pasted code over SSH
+const token = await auth.getAccessToken() // refreshes when it is about to expire
+await auth.logout()                 // revokes the sign-in and forgets it
+```
+
+`signIn({ mode })` forces a flow: `'loopback'` (browser on this machine) or `'manual'` (paste the code
+the page shows). The default, `'auto'`, uses the pasted code over SSH or on a machine with no browser.
+
+Register both redirect URIs for the client: `http://127.0.0.1/callback` and
+`https://<sso-domain>/oauth2/code`.
+
+`getAccessToken()` throws `AuthSessionError`: `SIGNED_OUT` means the sign-in was revoked or expired and
+the session has been cleared — run your login command again; `UNAVAILABLE` means the service could not
+be reached and the session was kept; `NO_SESSION` means nobody has signed in yet.
+
+Requires Node 20 or newer. The session file is created `0600` in `~/.config/<appName>/`
+(`%APPDATA%\<appName>\` on Windows).
