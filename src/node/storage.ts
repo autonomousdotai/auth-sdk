@@ -23,6 +23,9 @@ export function configFilePath(appName: string): string {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
+const errorCode = (err: unknown): string | undefined =>
+  typeof err === 'object' && err !== null && 'code' in err ? String((err as { code: unknown }).code) : undefined
+
 /** Session storage in a file only this user can read. */
 export function fileTokenStorage(appName: string): NodeTokenStorage {
   const path = configFilePath(appName)
@@ -45,7 +48,15 @@ export function fileTokenStorage(appName: string): NodeTokenStorage {
         const handle = await open(lockPath, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY, 0o600)
         await handle.close()
         return
-      } catch {
+      } catch (err) {
+        if (errorCode(err) !== 'EEXIST') {
+          // Not "the lock is held" — a real problem (permissions, no space, ...).
+          // Surface it instead of retrying for LOCK_TIMEOUT_MS and reporting a
+          // misleading timeout.
+          const wrapped = new Error(`Could not create lock file ${lockPath}: ${(err as Error).message}`)
+          ;(wrapped as Error & { cause?: unknown }).cause = err
+          throw wrapped
+        }
         const age = await stat(lockPath).then((s) => Date.now() - s.mtimeMs, () => 0)
         if (age > LOCK_STALE_MS) {
           // The process holding it died; take it over.
@@ -65,8 +76,13 @@ export function fileTokenStorage(appName: string): NodeTokenStorage {
       let raw: string
       try {
         raw = await readFile(path, 'utf8')
-      } catch {
-        return null
+      } catch (err) {
+        const code = errorCode(err)
+        if (code === 'ENOENT' || code === 'ENOTDIR') {
+          return null
+        }
+        // A real filesystem problem (e.g. EACCES, EISDIR) is not "signed out".
+        throw err
       }
       try {
         const parsed = JSON.parse(raw) as NodeSession

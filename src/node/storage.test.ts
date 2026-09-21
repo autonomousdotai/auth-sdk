@@ -1,9 +1,15 @@
 import { mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { chmod } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { configFilePath, fileTokenStorage } from './storage'
+import { configDirPath, configFilePath, fileTokenStorage } from './storage'
 import type { NodeSession } from './types'
+
+// Permission bits are not enforced for root (uid 0) and node:fs chmod modes are
+// not meaningful on Windows, so the permission-error tests below can't run there.
+const canEnforcePermissions =
+  process.platform !== 'win32' && (typeof process.getuid !== 'function' || process.getuid() !== 0)
 
 const session: NodeSession = {
   accessToken: 'at',
@@ -78,4 +84,37 @@ describe('fileTokenStorage', () => {
     await expect(storage.withLock(async () => { throw new Error('boom') })).rejects.toThrow('boom')
     await expect(storage.withLock(async () => 'free')).resolves.toBe('free')
   })
+
+  it.skipIf(!canEnforcePermissions)('throws when the session file exists but cannot be read', async () => {
+    const storage = fileTokenStorage('my-cli')
+    await storage.write(session)
+    const path = configFilePath('my-cli')
+    await chmod(path, 0o000)
+
+    try {
+      await expect(storage.read()).rejects.toThrow()
+    } finally {
+      await chmod(path, 0o600)
+    }
+  })
+
+  it.skipIf(!canEnforcePermissions)(
+    'withLock fails fast with the underlying error when the lock file cannot be created',
+    async () => {
+      const storage = fileTokenStorage('my-cli')
+      await storage.write(session) // creates the config dir
+      const dir = configDirPath('my-cli')
+      await chmod(dir, 0o500) // read + execute only: no permission to create a file in it
+
+      try {
+        const start = Date.now()
+        await expect(storage.withLock(async () => 'never')).rejects.toThrow(/Could not create lock file/)
+        // Must fail immediately, not after LOCK_TIMEOUT_MS (10s) of retrying.
+        expect(Date.now() - start).toBeLessThan(5_000)
+      } finally {
+        await chmod(dir, 0o700)
+      }
+    },
+    15_000,
+  )
 })
