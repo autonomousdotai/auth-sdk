@@ -25,7 +25,7 @@ The harness CLI is **not** changed here; the first consumer is the example CLI i
 | PKCE | Reuses `src/pkce.ts` (Web Crypto, available in Node ≥ 20), S256 only. |
 | Refresh failure | HTTP 400 **or** 401 → the session is gone: clear it and throw `SIGNED_OUT`. Network error or 5xx → keep the tokens and throw `UNAVAILABLE`. |
 | Example CLI | `example/cli` with `login` / `whoami` / `logout`, used to test by hand against staging. |
-| Release | `1.1.0` on npm, with the user's approval. |
+| Release | `1.0.10` on npm, with the user's approval. |
 
 ## API
 
