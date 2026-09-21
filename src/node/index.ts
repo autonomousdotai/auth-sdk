@@ -1,7 +1,7 @@
-export { fileTokenStorage, configFilePath, configDirPath } from './storage'
-export { AuthSignInError, AuthSessionError } from './errors'
-export { NodeAuthClient, createNodeAuthClient } from './client'
-export { prefersManualMode } from './environment'
+export { fileTokenStorage, configFilePath, configDirPath } from './storage.js'
+export { AuthSignInError, AuthSessionError } from './errors.js'
+export { NodeAuthClient, createNodeAuthClient } from './client.js'
+export { prefersManualMode } from './environment.js'
 export type {
   NodeAuthConfig,
   NodeSession,
@@ -9,4 +9,4 @@ export type {
   NodeSignInMode,
   NodeSignInOptions,
   NodeTokenStorage,
-} from './types'
+} from './types.js'

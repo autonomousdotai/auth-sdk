@@ -1,12 +1,12 @@
 // Core exports
-export { AuthClient, createAuthClient } from './client';
-export { TokenManager, defaultStorage } from './storage';
+export { AuthClient, createAuthClient } from './client.js';
+export { TokenManager, defaultStorage } from './storage.js';
 export {
   generateCodeVerifier,
   generateCodeChallenge,
   generateState,
   pkceStorage,
-} from './pkce';
+} from './pkce.js';
 
 // Type exports
 export type {
@@ -22,4 +22,4 @@ export type {
   AuthState,
   AuthContextValue,
   CallbackResult,
-} from './types';
+} from './types.js';

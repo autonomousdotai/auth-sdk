@@ -1,5 +1,5 @@
-import { useAuthContext } from './AuthProvider';
-import type { User } from '../types';
+import { useAuthContext } from './AuthProvider.js';
+import type { User } from '../types.js';
 
 /**
  * Hook to get current user information

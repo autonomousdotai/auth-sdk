@@ -1,5 +1,5 @@
-import { useAuthContext } from './AuthProvider';
-import type { AuthContextValue } from '../types';
+import { useAuthContext } from './AuthProvider.js';
+import type { AuthContextValue } from '../types.js';
 
 /**
  * Hook to access authentication state and actions

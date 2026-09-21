@@ -1,13 +1,13 @@
-import { generateCodeChallenge, generateCodeVerifier, generateState, pkceStorage } from './pkce';
-import { TokenManager, defaultStorage } from './storage';
+import { generateCodeChallenge, generateCodeVerifier, generateState, pkceStorage } from './pkce.js';
+import { TokenManager, defaultStorage } from './storage.js';
 import type {
   AuthConfig,
   AuthorizeOptions,
   CallbackResult,
   TokenResponse,
   User,
-} from './types';
-import { SDK_VERSION } from './version';
+} from './types.js';
+import { SDK_VERSION } from './version.js';
 
 /** A slow or failing revoke never holds up logout for longer than this. */
 const REVOKE_TIMEOUT_MS = 2000;

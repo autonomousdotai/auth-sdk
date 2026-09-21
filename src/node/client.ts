@@ -1,12 +1,12 @@
 import { hostname } from 'node:os'
-import { generateCodeChallenge, generateCodeVerifier, generateState } from '../pkce'
-import { openBrowser, prefersManualMode } from './environment'
-import { AuthSessionError, AuthSignInError } from './errors'
-import { awaitLoopbackCallback } from './loopback'
-import { defaultSignInIO, readPastedCode } from './manual'
-import { buildAuthorizeUrl, exchangeCode, refreshSession, revokeRefreshToken } from './oauth'
-import { fileTokenStorage } from './storage'
-import type { NodeAuthConfig, NodeSession, NodeSignInOptions, NodeTokenStorage } from './types'
+import { generateCodeChallenge, generateCodeVerifier, generateState } from '../pkce.js'
+import { openBrowser, prefersManualMode } from './environment.js'
+import { AuthSessionError, AuthSignInError } from './errors.js'
+import { awaitLoopbackCallback } from './loopback.js'
+import { defaultSignInIO, readPastedCode } from './manual.js'
+import { buildAuthorizeUrl, exchangeCode, refreshSession, revokeRefreshToken } from './oauth.js'
+import { fileTokenStorage } from './storage.js'
+import type { NodeAuthConfig, NodeSession, NodeSignInOptions, NodeTokenStorage } from './types.js'
 
 const DEFAULT_TIMEOUT_MS = 300_000
 /** Refresh this long before the access token expires. */

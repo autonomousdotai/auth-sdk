@@ -1,6 +1,6 @@
 import { createInterface } from 'node:readline/promises'
-import { AuthSignInError } from './errors'
-import type { NodeSignInIO } from './types'
+import { AuthSignInError } from './errors.js'
+import type { NodeSignInIO } from './types.js'
 
 /** Prompts on stderr and reads from stdin, so stdout stays free for output. */
 export function defaultSignInIO(): NodeSignInIO {

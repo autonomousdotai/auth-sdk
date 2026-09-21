@@ -2,7 +2,7 @@ import { constants } from 'node:fs'
 import { mkdir, open, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
-import type { NodeSession, NodeTokenStorage } from './types'
+import type { NodeSession, NodeTokenStorage } from './types.js'
 
 const LOCK_TIMEOUT_MS = 10_000
 const LOCK_STALE_MS = 30_000

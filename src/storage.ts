@@ -1,4 +1,4 @@
-import type { JwtPayload, TokenResponse, TokenStorage, User } from './types';
+import type { JwtPayload, TokenResponse, TokenStorage, User } from './types.js';
 
 const ACCESS_TOKEN_KEY = 'auth_sdk_access_token';
 const REFRESH_TOKEN_KEY = 'auth_sdk_refresh_token';

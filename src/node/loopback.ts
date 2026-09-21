@@ -1,5 +1,5 @@
 import { createServer } from 'node:http'
-import { AuthSignInError } from './errors'
+import { AuthSignInError } from './errors.js'
 
 const DONE_PAGE = `<!doctype html><meta charset="utf-8"><title>Signed in</title>
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;padding:64px">

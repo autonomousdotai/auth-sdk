@@ -1,6 +1,6 @@
-import { SDK_VERSION } from '../version'
-import { AuthSessionError, AuthSignInError } from './errors'
-import type { NodeAuthConfig, NodeSession } from './types'
+import { SDK_VERSION } from '../version.js'
+import { AuthSessionError, AuthSignInError } from './errors.js'
+import type { NodeAuthConfig, NodeSession } from './types.js'
 
 const DEFAULT_SCOPE = 'openid profile email'
 const TOKEN_TIMEOUT_MS = 30_000
