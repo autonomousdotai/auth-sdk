@@ -2,7 +2,7 @@
 // Example CLI for @autonomous-ai/auth-sdk/node. Run it from the repo root
 // after `npm run build`:
 //   node example/cli/cli.mjs login --sso https://auth.staging.autonomousdev.xyz --client-id manual-code-test
-import { createNodeAuthClient, configFilePath, AuthSessionError, AuthSignInError } from '../../dist/node/index.js'
+import { AuthSessionError, AuthSignInError, configFilePath, createNodeAuthClient } from '../../dist/node/index.js'
 
 const args = process.argv.slice(2)
 const command = args[0]
@@ -14,6 +14,7 @@ const flag = (name, fallback) => {
 const auth = createNodeAuthClient({
   ssoUrl: flag('sso', 'https://auth.autonomous.ai'),
   clientId: flag('client-id', 'manual-code-test'),
+  scope: "openid profile email cart company",
   appName: flag('app', 'auth-sdk-example'),
 })
 
