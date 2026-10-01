@@ -1,3 +1,5 @@
+import type { SignInProvider } from '../types.js'
+
 /** A CLI's stored sign-in. Times are unix milliseconds. */
 export interface NodeSession {
   accessToken: string
@@ -30,6 +32,8 @@ export interface NodeSignInOptions {
   prompt?: 'select_account' | 'login'
   loginHint?: string
   entryPoint?: string
+  /** Go straight to this provider when the SSO would show its login page. */
+  provider?: SignInProvider
   timeoutMs?: number
   signal?: AbortSignal
   io?: NodeSignInIO

@@ -243,6 +243,30 @@ describe('logout', () => {
   })
 })
 
+describe('provider hint', () => {
+  it('asks the SSO to start with the chosen provider', async () => {
+    const auth = client()
+    let printed = ''
+    const answers = io([])
+    answers.readLine = async () => `pasted-code#${new URL(printed).searchParams.get('state')}`
+
+    await auth.signIn({ mode: 'manual', provider: 'apple', io: answers, onAuthorizeUrl: (url) => { printed = url } })
+
+    expect(new URL(printed).searchParams.get('provider')).toBe('apple')
+  })
+
+  it('leaves the choice to the login page by default', async () => {
+    const auth = client()
+    let printed = ''
+    const answers = io([])
+    answers.readLine = async () => `pasted-code#${new URL(printed).searchParams.get('state')}`
+
+    await auth.signIn({ mode: 'manual', io: answers, onAuthorizeUrl: (url) => { printed = url } })
+
+    expect(new URL(printed).searchParams.has('provider')).toBe(false)
+  })
+})
+
 describe('mode selection', () => {
   it('uses the manual flow over SSH without opening a browser', async () => {
     vi.stubEnv('SSH_CONNECTION', '10.0.0.1 22')

@@ -98,6 +98,7 @@ export class NodeAuthClient {
       buildAuthorizeUrl(this.config, {
         redirectUri, state, codeChallenge,
         prompt: options.prompt, loginHint: options.loginHint, entryPoint: options.entryPoint,
+        provider: options.provider,
       })
 
     const runManual = async (): Promise<{ code: string; redirectUri: string }> => {

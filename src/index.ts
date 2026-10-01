@@ -13,6 +13,7 @@ export type {
   AuthConfig,
   TokenStorage,
   AuthorizeOptions,
+  SignInProvider,
   TokenResponse,
   OAuth2Error,
   ApiResponse,

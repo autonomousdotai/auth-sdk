@@ -24,6 +24,12 @@ export interface TokenStorage {
 }
 
 /**
+ * A sign-in provider the SSO login page can go straight to, instead of
+ * showing its own form.
+ */
+export type SignInProvider = 'google' | 'apple';
+
+/**
  * Options for authorize flow
  */
 export interface AuthorizeOptions {
@@ -35,6 +41,12 @@ export interface AuthorizeOptions {
   nextUrl?: string;
   /** UI placement that started the sign-in (e.g. "header", "checkout"), for login source tracking */
   entryPoint?: string;
+  /**
+   * Go straight to this provider when the SSO would show its login page —
+   * for your own "Continue with Google" button. Ignored when the browser is
+   * already signed in to the SSO.
+   */
+  provider?: SignInProvider;
 }
 
 /**
