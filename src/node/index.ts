@@ -10,3 +10,4 @@ export type {
   NodeSignInOptions,
   NodeTokenStorage,
 } from './types.js'
+export type { SignInProvider } from '../types.js'

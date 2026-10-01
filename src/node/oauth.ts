@@ -19,7 +19,7 @@ const trimUrl = (url: string) => url.replace(/\/$/, '')
 
 export function buildAuthorizeUrl(
   config: NodeAuthConfig,
-  args: { redirectUri: string; state: string; codeChallenge: string; prompt?: string; loginHint?: string; entryPoint?: string },
+  args: { redirectUri: string; state: string; codeChallenge: string; prompt?: string; loginHint?: string; entryPoint?: string; provider?: string },
 ): string {
   const url = new URL('/oauth2/authorize', trimUrl(config.ssoUrl))
   url.searchParams.set('response_type', 'code')
@@ -32,6 +32,7 @@ export function buildAuthorizeUrl(
   if (args.prompt) url.searchParams.set('prompt', args.prompt)
   if (args.loginHint) url.searchParams.set('login_hint', args.loginHint)
   if (args.entryPoint) url.searchParams.set('entry_point', args.entryPoint)
+  if (args.provider) url.searchParams.set('provider', args.provider)
   return url.toString()
 }
 

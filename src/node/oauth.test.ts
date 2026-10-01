@@ -43,7 +43,7 @@ describe('buildAuthorizeUrl', () => {
   it('asks for a code with PKCE and passes the options through', () => {
     const url = new URL(buildAuthorizeUrl(
       { ssoUrl: 'https://auth.test', clientId: 'my-cli', appName: 'my-cli' },
-      { redirectUri: 'http://127.0.0.1:5555/callback', state: 'st', codeChallenge: 'ch', prompt: 'select_account', loginHint: 'a@b.c', entryPoint: 'cli' },
+      { redirectUri: 'http://127.0.0.1:5555/callback', state: 'st', codeChallenge: 'ch', prompt: 'select_account', loginHint: 'a@b.c', entryPoint: 'cli', provider: 'google' },
     ))
 
     expect(url.origin + url.pathname).toBe('https://auth.test/oauth2/authorize')
@@ -58,7 +58,19 @@ describe('buildAuthorizeUrl', () => {
       prompt: 'select_account',
       login_hint: 'a@b.c',
       entry_point: 'cli',
+      provider: 'google',
     })
+  })
+
+  it('sends no optional parameter that was not asked for', () => {
+    const url = new URL(buildAuthorizeUrl(
+      { ssoUrl: 'https://auth.test', clientId: 'my-cli', appName: 'my-cli' },
+      { redirectUri: 'http://127.0.0.1:5555/callback', state: 'st', codeChallenge: 'ch' },
+    ))
+
+    for (const name of ['prompt', 'login_hint', 'entry_point', 'provider']) {
+      expect(url.searchParams.has(name), name).toBe(false)
+    }
   })
 })
 
