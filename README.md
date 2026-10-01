@@ -216,8 +216,9 @@ login({ provider: 'google' }) // or 'apple'; authorize({ provider }) on AuthClie
 
 When the SSO would show its login page, it goes straight to that provider and
 comes back signed in — no second click on the SSO page. If the browser already
-has an SSO session, that session is used and the hint does nothing. A cancelled
-or failed attempt lands on the ordinary SSO login page. Needs auth-service
+has an SSO session, that session is used and the hint does nothing. If the
+provider reports a cancel or a failure, the user lands on the ordinary SSO login
+page; pressing Back at the provider returns to your app. Needs auth-service
 v1.0.77 or later; an older SSO ignores the parameter. The Node client takes the
 same option: `signIn({ provider: 'google' })`.
 
@@ -239,7 +240,7 @@ same option: `signIn({ provider: 'google' })`.
 | `loginHint` | `string`                                | Pre-fill email for login                  |
 | `nextUrl`   | `string`                                | URL to redirect to after successful login |
 | `entryPoint` | `string`                               | UI placement that started the sign-in     |
-| `provider`  | `'google' \| 'apple'`                   | Go straight to that provider (see below)  |
+| `provider`  | `'google' \| 'apple'`                   | Go straight to that provider (see above)  |
 
 ### User
 
