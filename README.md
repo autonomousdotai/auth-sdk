@@ -214,13 +214,15 @@ client.logout();
 login({ provider: 'google' }) // or 'apple'; authorize({ provider }) on AuthClient
 ```
 
-When the SSO would show its login page, it goes straight to that provider and
-comes back signed in — no second click on the SSO page. If the browser already
-has an SSO session, that session is used and the hint does nothing. If the
-provider reports a cancel or a failure, the user lands on the ordinary SSO login
-page; pressing Back at the provider returns to your app. Needs auth-service
-v1.0.77 or later; an older SSO ignores the parameter. The Node client takes the
-same option: `signIn({ provider: 'google' })`.
+The SSO goes straight to that provider and comes back signed in — no second
+click on the SSO page. This holds even when the browser already has an SSO
+session: the button is the user's choice of account, so the session is not
+reused (auth-service v1.0.79 and later; v1.0.77–v1.0.78 reused the session).
+`prompt: 'none'` takes precedence — it never shows a page. If the provider
+reports a cancel or a failure, the user lands on the ordinary SSO login page;
+pressing Back at the provider returns to your app. Needs auth-service v1.0.77 or
+later; an older SSO ignores the parameter. The Node client takes the same
+option: `signIn({ provider: 'google' })`.
 
 ### AuthConfig
 
