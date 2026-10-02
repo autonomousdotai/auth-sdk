@@ -42,9 +42,9 @@ export interface AuthorizeOptions {
   /** UI placement that started the sign-in (e.g. "header", "checkout"), for login source tracking */
   entryPoint?: string;
   /**
-   * Go straight to this provider when the SSO would show its login page —
-   * for your own "Continue with Google" button. Ignored when the browser is
-   * already signed in to the SSO.
+   * Go straight to this provider instead of the SSO login page — for your
+   * own "Continue with Google" button. Applies even when the browser already
+   * has an SSO session (auth-service v1.0.79+); `prompt: 'none'` wins.
    */
   provider?: SignInProvider;
 }
