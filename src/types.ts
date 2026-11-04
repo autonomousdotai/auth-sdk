@@ -27,7 +27,7 @@ export interface TokenStorage {
  * A sign-in provider the SSO login page can go straight to, instead of
  * showing its own form.
  */
-export type SignInProvider = 'google' | 'apple';
+export type SignInProvider = 'google' | 'apple' | 'github';
 
 /**
  * Options for authorize flow

@@ -66,7 +66,7 @@ describe('AuthClient.authorize', () => {
     })
   })
 
-  it.each(['google', 'apple'] as const)('asks the SSO to start with %s', async (provider) => {
+  it.each(['google', 'apple', 'github'] as const)('asks the SSO to start with %s', async (provider) => {
     expect((await authorizeUrl({ provider })).searchParams.get('provider')).toBe(provider)
   })
 })

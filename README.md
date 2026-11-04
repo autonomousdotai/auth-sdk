@@ -211,7 +211,7 @@ client.logout();
 ### Your own "Continue with Google" button
 
 ```ts
-login({ provider: 'google' }) // or 'apple'; authorize({ provider }) on AuthClient
+login({ provider: 'google' }) // or 'apple', 'github'; authorize({ provider }) on AuthClient
 ```
 
 The SSO goes straight to that provider and comes back signed in — no second
@@ -221,7 +221,7 @@ reused (auth-service v1.0.79 and later; v1.0.77–v1.0.78 reused the session).
 `prompt: 'none'` takes precedence — it never shows a page. If the provider
 reports a cancel or a failure, the user lands on the ordinary SSO login page;
 pressing Back at the provider returns to your app. Needs auth-service v1.0.77 or
-later; an older SSO ignores the parameter. The Node client takes the same
+later (`github`: v1.0.92 or later); an older SSO ignores the parameter. The Node client takes the same
 option: `signIn({ provider: 'google' })`.
 
 ### AuthConfig
@@ -242,7 +242,7 @@ option: `signIn({ provider: 'google' })`.
 | `loginHint` | `string`                                | Pre-fill email for login                  |
 | `nextUrl`   | `string`                                | URL to redirect to after successful login |
 | `entryPoint` | `string`                               | UI placement that started the sign-in     |
-| `provider`  | `'google' \| 'apple'`                   | Go straight to that provider (see above)  |
+| `provider`  | `'google' \| 'apple' \| 'github'`        | Go straight to that provider (see above)  |
 
 ### User
 
